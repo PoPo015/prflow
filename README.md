@@ -33,21 +33,35 @@ GitHub PR 화면은 바뀐 줄만, 파일 알파벳 순으로 보여줍니다. p
 - **코드 탐색** — 폴더 트리 + 전체 파일, `⌘+클릭` / `⌘B` 로 정의 이동, `⌘[` 뒤로
 - **AI 에게 묻기** — 줄 번호 클릭(Shift+클릭으로 범위) → "여기 동시에 두 요청 오면 문제 없어?" 같은 질문에 AI 가 레포를 읽고 그 줄 아래에 답변
 
-## 필요한 것
+## 시작하기
 
-- Node.js 20+
-- [GitHub CLI](https://cli.github.com/) (`gh auth login` 완료)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`claude` 명령, 로그인 완료)
+prflow 는 API 키나 토큰을 따로 저장하지 않습니다. **내 PC 에 이미 로그인된 `gh` 와 `claude` 를 그대로 빌려 씁니다.**
 
-## 사용법
+**1. 필요한 도구 설치 + 로그인 (처음 한 번)**
+
+| 도구 | 설치 | 로그인 |
+|---|---|---|
+| Node.js 20+ | https://nodejs.org | – |
+| GitHub CLI | https://cli.github.com | `gh auth login` — 비공개 레포는 접근 권한이 있는 계정으로 |
+| Claude Code | https://docs.anthropic.com/en/docs/claude-code | `claude` 를 한 번 실행해 로그인 (Claude 구독 또는 API 키) |
+
+**2. 설치와 점검**
 
 ```bash
+git clone https://github.com/PoPo015/prflow.git && cd prflow
 npm install
+npm run doctor        # 도구·로그인 상태 점검
+```
+
+**3. 사용**
+
+```bash
 npm run analyze https://github.com/<owner>/<repo>/pull/<번호>   # 1~2분
 npm run dev                                                     # http://localhost:4173
 ```
 
 분석 없이 `npm run dev` 만 실행하면 가상의 샘플 PR 을 볼 수 있습니다.
+분석과 "AI 에게 묻기" 는 내 Claude 계정의 사용량을 씁니다.
 
 ## 어떻게 동작하나
 

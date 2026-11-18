@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { doctor } from './doctor.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = join(homedir(), '.prflow')
@@ -20,6 +21,7 @@ if (!m) {
   console.error('사용법: npm run analyze https://github.com/<owner>/<repo>/pull/<번호>')
   process.exit(1)
 }
+if (!doctor({ quiet: true })) process.exit(1)
 const [, owner, repo, num] = m
 const slug = `${owner}-${repo}-${num}`
 
