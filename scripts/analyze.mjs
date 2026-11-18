@@ -48,18 +48,32 @@ if (existsSync(workDir)) {
 sh('git', ['-C', repoDir, 'worktree', 'add', '-q', '--detach', workDir, pr.headRefOid])
 log(`✓ 코드 준비: ${workDir}`)
 
-// ③ 스택 감지 (파일만 보고 판단, AI 안 씀)
+// ③ 스택 감지 (파일만 보고 판단, AI 안 씀). 모노레포를 위해 3단계 깊이까지의 빌드 파일을 본다
 const stacks = []
-const has = (f) => existsSync(join(workDir, f))
-const read = (f) => (has(f) ? readFileSync(join(workDir, f), 'utf8') : '')
-const gradle = read('build.gradle') + read('build.gradle.kts') + read('pom.xml')
-if (gradle) stacks.push(gradle.includes('spring') ? 'Spring Boot' : 'Java')
-if (gradle.includes('jpa')) stacks.push('JPA')
-if (gradle.includes('querydsl')) stacks.push('QueryDSL')
-const pkg = read('package.json')
-if (pkg.includes('"next"')) stacks.push('Next.js')
-else if (pkg.includes('"react"')) stacks.push('React')
-if (has('pyproject.toml') || has('requirements.txt')) stacks.push('Python')
+const tracked = sh('git', ['-C', workDir, 'ls-files']).split('\n')
+const buildFiles = (names) => tracked.filter((f) => names.includes(f.split('/').pop()) && f.split('/').length <= 3 && !/(^|\/)(node_modules|vendor|testdata|docs?)\//.test(f))
+const readAll = (names) => buildFiles(names).map((f) => readFileSync(join(workDir, f), 'utf8')).join('\n')
+const add = (s) => !stacks.includes(s) && stacks.push(s)
+const jvm = readAll(['build.gradle', 'build.gradle.kts', 'pom.xml'])
+if (jvm) add(/spring/i.test(jvm) ? 'Spring Boot' : 'Java')
+if (/jpa|hibernate/i.test(jvm)) add('JPA')
+if (/querydsl/i.test(jvm)) add('QueryDSL')
+if (/kotlin/i.test(jvm)) add('Kotlin')
+const pkgs = readAll(['package.json'])
+if (/"next"\s*:/.test(pkgs)) add('Next.js')
+else if (/"react"\s*:/.test(pkgs)) add('React')
+if (/"typescript"\s*:/.test(pkgs)) add('TypeScript')
+if (/"(@prisma\/client|prisma)"\s*:/.test(pkgs)) add('Prisma')
+if (buildFiles(['go.mod']).length) add('Go')
+const py = readAll(['pyproject.toml', 'requirements.txt', 'setup.py', 'Pipfile'])
+if (py || buildFiles(['manage.py']).length) {
+  add('Python')
+  if (/django/i.test(py) || buildFiles(['manage.py']).length) add('Django')
+  if (/fastapi/i.test(py)) add('FastAPI')
+}
+// 언어 비중으로 주 언어가 빠졌는지 보정 (예: Go 레포에 문서용 requirements.txt 만 있는 경우)
+const ext = (e) => tracked.filter((f) => f.endsWith(e)).length
+if (stacks.includes('Python') && ext('.go') > ext('.py') * 3) stacks.splice(stacks.indexOf('Python'), 1)
 log(`✓ 스택 감지: ${stacks.join(', ') || '알 수 없음'}`)
 
 // diff 에서 head 쪽 "추가된 줄" 번호 수집 → 화면의 + 표시용
@@ -97,7 +111,8 @@ ${diff.slice(0, MAX_DIFF)}
 # 할 일
 1. 이 PR 이 추가·변경한 "핵심 흐름"을 찾아라. 진입점(화면/API/스케줄러/이벤트)부터 서비스 → 저장소 → DB/외부까지.
    PR 이 크면 가장 중요한 흐름 위주로 노드 6~14개로 압축한다. 변경 안 된 코드라도 흐름상 거쳐 가면 노드로 넣고 change=unchanged.
-2. 각 노드의 code 는 실제 파일 경로와 줄 범위(startLine~endLine, 최대 ${MAX_SNIPPET}줄)만 적는다. 코드 본문은 프로그램이 채운다.
+2. label 은 반드시 실제 코드 심볼 이름(Class.method, 함수명, 파일명, 테이블명)으로 쓴다. 한국어 설명은 sub 에 짧게.
+   각 노드의 code 는 실제 파일 경로와 줄 범위(startLine~endLine, 최대 ${MAX_SNIPPET}줄)만 적는다. 코드 본문은 프로그램이 채운다.
    줄 번호는 반드시 파일을 Read 해서 확인한 실제 번호여야 한다.
 3. annotations 는 "처음 이 코드를 보는 사람"을 위한 설명이다. 코드 줄 번호(실제 파일 기준, 범위 안)에 붙인다.
    - flow: 이 줄이 전체 흐름에서 어떤 역할인지, 어디로 이어지는지
@@ -148,8 +163,20 @@ for (const n of ai.nodes) {
     source: lines.slice(start - 1, end).join('\n'),
     changedLines: [...changed].filter((l) => l >= start && l <= end),
   }
+  // 변경 표시는 AI 판단 대신 diff 기준으로: 새 파일 → added, 범위에 추가된 줄 → modified
+  const fileInfo = pr.files.find((f) => f.path === n.code.file)
+  if (fileInfo && fileInfo.deletions === 0 && fileInfo.additions >= lines.length - 1) n.change = 'added'
+  else if (n.code.changedLines.length) n.change = 'modified'
+  else n.change = 'unchanged'
   const before = n.annotations?.length ?? 0
   n.annotations = (n.annotations ?? []).filter((a) => a.line >= start && a.line <= end)
+  // 빈 줄에 붙은 설명은 아래(없으면 위) 첫 코드 줄로 옮긴다
+  for (const a of n.annotations) {
+    if (lines[a.line - 1]?.trim()) continue
+    let d = 1
+    while (d < 6 && !(lines[a.line - 1 + d]?.trim() && a.line + d <= end) && !(lines[a.line - 1 - d]?.trim() && a.line - d >= start)) d++
+    a.line = lines[a.line - 1 + d]?.trim() && a.line + d <= end ? a.line + d : a.line - d
+  }
   dropped += before - n.annotations.length
 }
 const edges = ai.edges.filter((e) => ids.has(e.from) && ids.has(e.to))

@@ -87,7 +87,13 @@ PR URL
 
 ## 상태
 
-MVP 입니다. 화면은 다크 테마·데스크톱 기준이고, 테스트는 아직 없습니다.
+MVP 입니다. 화면은 다크 테마·데스크톱 기준입니다.
+
+공개 레포의 PR 8개(Java/Spring, TS/Next.js, Python/Django, Go 각 2개)로 검증했습니다. 건당 30~80초, Claude Code 보고 기준 $0.16~0.38 이었습니다.
+
+```bash
+npm run verify -v   # 분석 결과 점검: 구조, 노드↔코드 일치, 설명 위치, 변경 표시, 정의 이동 성공률
+```
 
 ## License
 

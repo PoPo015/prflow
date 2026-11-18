@@ -53,16 +53,28 @@ function findDefinition(dir: string, sym: string, from: string | null): DefHit[]
     out = execFileSync('git', ['-C', dir, 'grep', '-n', '-w', '-I', '-e', sym], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 })
   } catch { return [] } // 결과 없으면 exit 1
   const typeRe = new RegExp(`\\b(class|interface|enum|record|@interface|object|trait|type|struct)\\s+${sym}\\b`)
-  const fnRe = new RegExp(`(\\bfunction\\s+${sym}\\b|\\bdef\\s+${sym}\\b|\\bfun\\s+${sym}\\b|\\b(const|let|var)\\s+${sym}\\s*=)`)
+  // function / def / fun / const x = / Go 메서드 func (r *T) Name(
+  const fnRe = new RegExp(`(\\bfunction\\*?\\s+${sym}\\b|\\b(async\\s+)?def\\s+${sym}\\b|\\bfun\\s+${sym}\\b|\\b(const|let|var)\\s+${sym}\\s*[=:]|\\bfunc\\s+(\\([^)]*\\)\\s*)?${sym}\\s*[(\\[])`)
+  // Java/Kotlin/C# 메서드: 반환 타입 + 이름(
   const methodRe = new RegExp(`^\\s*(@\\w+(\\([^)]*\\))?\\s+)*((public|private|protected|static|final|abstract|synchronized|default|override|open|suspend|async|export)\\s+)*[\\w<>\\[\\],.?]+\\s+${sym}\\s*\\([^;]*$`)
-  const notDecl = /^\s*(return|new|throw|else|if|while|for|case)\b/
+  // TS/JS 클래스·객체 메서드: async name(…) { / name(…): T {
+  const jsMethodRe = new RegExp(`^\\s*((public|private|protected|static|async|get|set|readonly|override)\\s+)*${sym}\\s*(<[^>]*>)?\\s*\\([^)]*\\)?\\s*(:\\s*[^={;]+)?\\{?\\s*$`)
+  // enum 상수: 줄이 상수 이름으로 시작 (SUCCEEDED, / SUCCEEDED("…"), / SUCCEEDED = 1)
+  const enumRe = new RegExp(`^\\s*${sym}\\s*(\\(.*\\))?\\s*(,|;|=|\\{|$)`)
+  // 상수·필드: static final X =, val X, readonly X, 구조 분해 const [a, setA] = / const { X } =
+  const fieldRe = new RegExp(`(\\b(static|final|val|readonly)\\b[^=(]*\\b${sym}\\s*[=:;]|\\b(const|let|var)\\s*[\\[{][^=]*\\b${sym}\\b[^=]*[\\]}]\\s*=)`)
+  // Go: 구조체 필드(Name string), const/var 블록(Name = …)
+  const goFieldRe = new RegExp(`^\\s*${sym}(\\s*,\\s*\\w+)*\\s+([*\\[\\]\\w.{}]+)(\\s+\`.*\`)?\\s*(//.*)?$|^\\s*${sym}(\\s+[\\w.*\\[\\]]+)?\\s*=[^=]`)
+  const notDecl = /^\s*(return|new|throw|else|if|while|for|case|await)\b/
   const hits: DefHit[] = []
   for (const row of out.split('\n')) {
     const m = row.match(/^(.+?):(\d+):(.*)$/)
     if (!m) continue
     const [, path, ln, text] = m
     if (typeRe.test(text)) hits.push({ path, line: +ln, text: text.trim(), kind: 'type' })
-    else if (fnRe.test(text) || (methodRe.test(text) && !notDecl.test(text))) hits.push({ path, line: +ln, text: text.trim(), kind: 'method' })
+    else if (fnRe.test(text) || (!notDecl.test(text) && (methodRe.test(text) || jsMethodRe.test(text)))) hits.push({ path, line: +ln, text: text.trim(), kind: 'method' })
+    else if (/^[A-Z][A-Z0-9_]+$/.test(sym) && enumRe.test(text)) hits.push({ path, line: +ln, text: text.trim(), kind: 'type' })
+    else if (!notDecl.test(text) && (fieldRe.test(text) || (path.endsWith('.go') && /^[A-Z]/.test(sym) && goFieldRe.test(text)))) hits.push({ path, line: +ln, text: text.trim(), kind: 'method' })
   }
   // 파일 이름이 심볼과 같은 경우 (Java 클래스 등)
   if (!hits.some((h) => h.kind === 'type')) {
