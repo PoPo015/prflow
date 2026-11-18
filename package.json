@@ -37,7 +37,8 @@
     "doctor": "node scripts/doctor.mjs",
     "verify": "node scripts/verify.mjs",
     "prepublishOnly": "npm run build",
-    "start": "node bin/prflow.mjs"
+    "start": "node bin/prflow.mjs",
+    "e2e": "node scripts/e2e.mjs"
   },
   "devDependencies": {
     "@dagrejs/dagre": "^3.1.3",
