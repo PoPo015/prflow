@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Graph } from './Graph'
 import { CodeLines } from './CodeLines'
 import { Explorer, type Loc } from './Explorer'
-import { api as makeApi, type Thread } from './api'
+import { api as makeApi, type Thread, type Usage } from './api'
+import { AnalyzeDialog } from './AnalyzeDialog'
+import { Notes } from './Notes'
 import type { Flow } from './types'
 
 export function App({ flow, flows, current }: { flow: Flow; flows: { id: string; title: string }[]; current: string }) {
@@ -15,7 +17,9 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
   // 코드 탐색: 분석한 레포가 로컬에 있을 때만 (샘플은 없음)
   const api = useMemo(() => makeApi(current), [current])
   const [hasRepo, setHasRepo] = useState(false)
-  const [mode, setMode] = useState<'flow' | 'code'>('flow')
+  const [mode, setMode] = useState<'flow' | 'code' | 'notes'>('flow')
+  const [analyzing, setAnalyzing] = useState(false)
+  const [usages, setUsages] = useState<{ sym: string; total: number; hits: Usage[] } | null>(null)
   const [loc, setLoc] = useState<Loc | null>(null)
   const [history, setHistory] = useState<Loc[]>([])
   const [threads, setThreads] = useState<Thread[]>([])
@@ -39,6 +43,12 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
   const ask = async (file: string, start: number, end: number, question: string, threadId?: string) => {
     const t = await api.ask({ file, start, end, question, threadId })
     setThreads((ts) => [...ts.filter((x) => x.id !== t.id), t])
+  }
+  const showUsages = async (sym: string, from?: Loc) => {
+    const r = await api.refs(sym)
+    setUsages({ sym, ...r })
+    if (from && !loc) setLoc(from)
+    setMode('code')
   }
   const goDefFromFlow = async (file: string, sym: string) => {
     const hits = await api.def(sym, file)
@@ -89,6 +99,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
         <div className="top-title">
           <div className="top-row">
             <span className="repo">{flow.meta.repo} #{flow.meta.pr}</span>
+            <button className="ghost new-pr" onClick={() => setAnalyzing(true)}>+ PR 분석</button>
             {flows.length > 0 && (
               <select value={current} onChange={(e) => (location.search = `?f=${e.target.value}`)}>
                 <option value="sample">샘플</option>
@@ -100,6 +111,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
           <div className="modes">
             <button className={mode === 'flow' ? 'on' : ''} onClick={() => setMode('flow')}>흐름</button>
             <button className={mode === 'code' ? 'on' : ''} onClick={() => setMode('code')} disabled={!hasRepo} title={hasRepo ? '' : '분석한 PR 에서만 쓸 수 있어요'}>코드</button>
+            <button className={mode === 'notes' ? 'on' : ''} onClick={() => setMode('notes')} title="지금까지 분석한 PR 의 개념을 모은 학습 노트">개념 노트</button>
           </div>
           <div className="stacks">{flow.meta.stacks.map((s) => <span key={s} className="chip">{s}</span>)}</div>
         </div>
@@ -109,9 +121,14 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
         </div>
       </header>
 
-      {mode === 'code' && hasRepo ? (
+      {mode === 'notes' ? (
+        <main className="main-code"><Notes /></main>
+      ) : mode === 'code' && hasRepo ? (
         <main className="main-code">
-          <Explorer api={api} flow={flow} loc={loc} onOpen={openCode} onBack={back} canBack={history.length > 0} threads={threads} onAsk={ask} />
+          <Explorer
+            api={api} flow={flow} loc={loc} onOpen={openCode} onBack={back} canBack={history.length > 0} threads={threads} onAsk={ask}
+            usages={usages} onUsages={(sym) => showUsages(sym)} onCloseUsages={() => setUsages(null)}
+          />
         </main>
       ) : (
       <main className="main">
@@ -155,6 +172,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
                     threads={threads.filter((t) => t.file === node.code!.file && t.start >= node.code!.startLine && t.end < node.code!.startLine + node.code!.source.split('\n').length)}
                     onConcept={openConcept}
                     onDefinition={hasRepo ? (sym) => goDefFromFlow(node.code!.file, sym) : undefined}
+                    onUsages={hasRepo ? (sym) => showUsages(sym, { path: node.code!.file, line: node.code!.startLine }) : undefined}
                     onAsk={hasRepo ? (s, e, q, id) => ask(node.code!.file, s, e, q, id) : undefined}
                   />
                 </div>
@@ -179,6 +197,8 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
         </section>
       </main>
       )}
+
+      {analyzing && <AnalyzeDialog onClose={() => setAnalyzing(false)} />}
 
       {mode === 'flow' && <footer className="steps">
         <button className="nav" onClick={() => go(-1)} disabled={step <= 0}>←</button>

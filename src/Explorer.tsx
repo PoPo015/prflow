@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CodeLines } from './CodeLines'
-import type { Api, DefHit, Thread } from './api'
+import { Usages } from './Usages'
+import type { Api, DefHit, Thread, Usage } from './api'
 import type { Flow } from './types'
 
 interface Dir { name: string; path: string; dirs: Dir[]; files: string[] }
@@ -32,7 +33,7 @@ function buildTree(paths: string[]): Dir {
 
 export interface Loc { path: string; line?: number }
 
-export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onAsk }: {
+export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onAsk, usages, onUsages, onCloseUsages }: {
   api: Api
   flow: Flow
   loc: Loc | null
@@ -41,6 +42,9 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
   canBack: boolean
   threads: Thread[]
   onAsk: (file: string, start: number, end: number, q: string, threadId?: string) => Promise<void>
+  usages: { sym: string; total: number; hits: Usage[] } | null
+  onUsages: (sym: string) => void
+  onCloseUsages: () => void
 }) {
   const [files, setFiles] = useState<string[]>([])
   const [onlyChanged, setOnlyChanged] = useState(true)
@@ -124,7 +128,7 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
   const annotations = flow.nodes.filter((n) => n.code?.file === content?.path).flatMap((n) => n.annotations ?? [])
 
   return (
-    <div className="explorer">
+    <div className={`explorer ${usages ? 'with-usages' : ''}`}>
       <aside className="tree">
         <div className="tree-tools">
           <input placeholder="파일 찾기" value={filter} onChange={(e) => setFilter(e.target.value)} />
@@ -137,7 +141,7 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
         <div className="viewer-bar">
           <button className="nav sm" onClick={onBack} disabled={!canBack} title="뒤로 (⌘[)">←</button>
           <span className="crumb">{loc?.path ?? '왼쪽에서 파일을 고르세요'}</span>
-          <span className="hint">⌘+클릭 / ⌘B 정의로 이동 · 줄 번호 클릭 AI 에게 묻기</span>
+          <span className="hint">⌘+클릭 정의 · ⌥+클릭 사용처 · 줄 번호 클릭 AI 에게 묻기</span>
         </div>
         {err && <div className="empty">{err}</div>}
         {content && loc && content.path === loc.path && (
@@ -150,6 +154,7 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
               threads={threads.filter((t) => t.file === content.path)}
               focusLine={loc.line}
               onDefinition={goDef}
+              onUsages={onUsages}
               onAsk={(s, e, q, id) => onAsk(content.path, s, e, q, id)}
             />
           </div>
@@ -169,6 +174,7 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
           </div>
         )}
       </section>
+      {usages && <Usages {...usages} onOpen={onOpen} onClose={onCloseUsages} />}
     </div>
   )
 }

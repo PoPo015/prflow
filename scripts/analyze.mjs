@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // 사용법: npm run analyze <PR URL> [--model sonnet]
-// PR 을 로컬에 펼치고 → Claude Code(headless, 읽기 전용)로 분석 → public/flows/*.json 저장
+// PR 을 로컬에 펼치고 → Claude Code(headless, 읽기 전용)로 분석 → ~/.prflow/flows/<slug>.json 저장
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { doctor } from './doctor.mjs'
+import { FLOWS, REPOS, WORK } from '../server/paths.mjs'
+import { addFlowToNotes } from '../server/notes.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const HOME = join(homedir(), '.prflow')
 const MAX_DIFF = 60_000
 const MAX_SNIPPET = 80
 
@@ -34,8 +34,8 @@ const diff = sh('gh', ['pr', 'diff', url])
 log(`✓ PR 수집: ${pr.title} (${pr.files.length}개 파일, head ${pr.headRefOid.slice(0, 7)})`)
 
 // ② head 커밋을 로컬 worktree 로 펼침 (레포는 한 번만 clone 하고 재사용)
-const repoDir = join(HOME, 'repos', owner, repo)
-const workDir = join(HOME, 'work', slug)
+const repoDir = join(REPOS, owner, repo)
+const workDir = join(WORK, slug)
 if (!existsSync(repoDir)) {
   mkdirSync(dirname(repoDir), { recursive: true })
   sh('gh', ['repo', 'clone', `${owner}/${repo}`, repoDir, '--', '--filter=blob:none', '--no-checkout', '-q'])
@@ -202,10 +202,10 @@ const flow = {
 }
 
 // ⑥ 저장 + 목록 갱신
-const outDir = join(ROOT, 'public', 'flows')
-mkdirSync(outDir, { recursive: true })
-writeFileSync(join(outDir, `${slug}.json`), JSON.stringify(flow, null, 2))
-const indexPath = join(outDir, 'index.json')
+mkdirSync(FLOWS, { recursive: true })
+writeFileSync(join(FLOWS, `${slug}.json`), JSON.stringify(flow, null, 2))
+addFlowToNotes(flow, slug)
+const indexPath = join(FLOWS, 'index.json')
 const index = existsSync(indexPath) ? JSON.parse(readFileSync(indexPath, 'utf8')).filter((f) => f.id !== slug) : []
 index.unshift({ id: slug, title: `${owner}/${repo} #${num} ${pr.title}` })
 writeFileSync(indexPath, JSON.stringify(index, null, 2))
@@ -213,4 +213,4 @@ writeFileSync(indexPath, JSON.stringify(index, null, 2))
 const sec = Math.round((Date.now() - started) / 1000)
 log(`✓ 노드 ${flow.nodes.length} · 선 ${edges.length} · 설명 ${flow.nodes.reduce((s, n) => s + (n.annotations?.length ?? 0), 0)} · 버림 ${dropped}`)
 log(`✓ 비용 $${res.total_cost_usd?.toFixed(2) ?? '?'} · ${sec}초 · ${res.num_turns}턴`)
-log(`→ npm run dev 후 http://localhost:4173/?f=${slug}`)
+log(`→ 화면: http://localhost:4173/?f=${slug}`)

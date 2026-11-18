@@ -5,9 +5,10 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { FLOWS, WORK } from '../server/paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const FLOWS = join(ROOT, 'public', 'flows')
+
 const DEV = 'http://localhost:4173'
 const KINDS = ['ui', 'api', 'service', 'repository', 'db', 'event', 'external']
 
@@ -28,7 +29,7 @@ const devUp = await fetch(`${DEV}/api/tree?f=x`).then(() => true, () => false)
 const rows = []
 for (const slug of targets) {
   const flow = JSON.parse(readFileSync(join(FLOWS, `${slug}.json`), 'utf8'))
-  const work = join(homedir(), '.prflow', 'work', slug)
+  const work = join(WORK, slug)
   const issues = []
   const ids = new Set(flow.nodes.map((n) => n.id))
 

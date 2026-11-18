@@ -5,7 +5,7 @@ import { App } from './App'
 import { sample } from './sample'
 import type { Flow } from './types'
 
-// public/flows 의 분석 결과를 읽고, 없으면 샘플을 보여준다
+// ~/.prflow/flows 의 분석 결과(/flows/*)를 읽고, 없으면 샘플을 보여준다
 async function load() {
   const flows: { id: string; title: string }[] = await fetch('/flows/index.json').then((r) => (r.ok ? r.json() : []), () => [])
   const want = new URLSearchParams(location.search).get('f') ?? flows[0]?.id ?? 'sample'

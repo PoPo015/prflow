@@ -21,7 +21,7 @@ export const langOf = (path: string) => {
 function useMetaKey() {
   const [down, setDown] = useState(false)
   useEffect(() => {
-    const on = (e: KeyboardEvent) => setDown(e.metaKey || e.ctrlKey)
+    const on = (e: KeyboardEvent) => setDown(e.metaKey || e.ctrlKey || e.altKey)
     const off = () => setDown(false)
     window.addEventListener('keydown', on)
     window.addEventListener('keyup', on)
@@ -98,10 +98,11 @@ export interface CodeLinesProps {
   focusLine?: number
   onConcept?: (id: string) => void
   onDefinition?: (sym: string) => void
+  onUsages?: (sym: string) => void
   onAsk?: (start: number, end: number, q: string, threadId?: string) => Promise<void>
 }
 
-export function CodeLines({ file, source, startLine = 1, changedLines, annotations, threads, focusLine, onConcept, onDefinition, onAsk }: CodeLinesProps) {
+export function CodeLines({ file, source, startLine = 1, changedLines, annotations, threads, focusLine, onConcept, onDefinition, onUsages, onAsk }: CodeLinesProps) {
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null)
   const [open, setOpen] = useState<Set<number>>(new Set())
   const [sel, setSel] = useState<{ a: number; b: number } | null>(null)
@@ -169,7 +170,10 @@ export function CodeLines({ file, source, startLine = 1, changedLines, annotatio
         key={key} className="sym" style={{ color: t.color }}
         onMouseEnter={() => (hovered.current = word)}
         onMouseLeave={() => (hovered.current = null)}
-        onClick={(e) => { if (e.metaKey || e.ctrlKey) { e.preventDefault(); onDefinition(word) } }}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey) { e.preventDefault(); onDefinition(word) }
+          else if (e.altKey && onUsages) { e.preventDefault(); onUsages(word) }
+        }}
       >{t.content}</span>
     )
   }

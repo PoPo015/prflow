@@ -31,7 +31,9 @@ GitHub PR 화면은 바뀐 줄만, 파일 알파벳 순으로 보여줍니다. p
   - `주의` 리뷰 때 확인할 점 (동시성, 트랜잭션 범위, 예외…)
 - **개념 사전** — PR 에 나온 개념만 모아서, 어디서 쓰였는지와 함께
 - **코드 탐색** — 폴더 트리 + 전체 파일, `⌘+클릭` / `⌘B` 로 정의 이동, `⌘[` 뒤로
+- **사용처 찾기** — `⌥+클릭` 으로 그 심볼을 쓰는 곳 목록. PR 이 건드리지 않은 곳(영향 범위)을 먼저 보여줌
 - **AI 에게 묻기** — 줄 번호 클릭(Shift+클릭으로 범위) → "여기 동시에 두 요청 오면 문제 없어?" 같은 질문에 AI 가 레포를 읽고 그 줄 아래에 답변
+- **개념 노트** — 지금까지 분석한 모든 PR 의 개념이 하나의 학습 노트로 쌓임. 마크다운으로 내보내기 (옵시디언 볼트 폴더로 지정 가능)
 
 ## 시작하기
 
@@ -45,23 +47,27 @@ prflow 는 API 키나 토큰을 따로 저장하지 않습니다. **내 PC 에 �
 | GitHub CLI | https://cli.github.com | `gh auth login` — 비공개 레포는 접근 권한이 있는 계정으로 |
 | Claude Code | https://docs.anthropic.com/en/docs/claude-code | `claude` 를 한 번 실행해 로그인 (Claude 구독 또는 API 키) |
 
-**2. 설치와 점검**
+**2. 실행**
+
+레포를 받아서 실행합니다.
 
 ```bash
 git clone https://github.com/PoPo015/prflow.git && cd prflow
 npm install
-npm run doctor        # 도구·로그인 상태 점검
+npm run doctor     # 도구·로그인 상태 점검
+npm run dev        # http://localhost:4173
 ```
 
-**3. 사용**
+화면 위쪽 **+ PR 분석** 에 PR 링크를 붙여넣으면 1~2분 뒤 결과가 열립니다. 터미널에서 `npm run analyze <PR URL>` 로 분석해도 됩니다.
+분석 전에는 가상의 샘플 PR 을 볼 수 있습니다. 분석과 "AI 에게 묻기" 는 내 Claude 계정의 사용량을 씁니다.
 
-```bash
-npm run analyze https://github.com/<owner>/<repo>/pull/<번호>   # 1~2분
-npm run dev                                                     # http://localhost:4173
-```
+**설정 (환경변수, 선택)**
 
-분석 없이 `npm run dev` 만 실행하면 가상의 샘플 PR 을 볼 수 있습니다.
-분석과 "AI 에게 묻기" 는 내 Claude 계정의 사용량을 씁니다.
+| 변수 | 기본값 | 용도 |
+|---|---|---|
+| `PRFLOW_HOME` | `~/.prflow` | 분석 결과·레포 사본·노트 저장 위치 |
+| `PRFLOW_NOTES_DIR` | `~/.prflow/notes/md` | 개념 노트 마크다운 내보내기 폴더 (옵시디언 볼트 폴더로 지정하면 바로 노트가 됨) |
+| `PRFLOW_PORT` | `4173` | `npm start` / `prflow` 실행 포트 |
 
 ## 어떻게 동작하나
 
@@ -72,7 +78,8 @@ PR URL
  ├─ 빌드 파일로 스택 감지 (Spring, Next.js, Python …)
  ├─ claude -p (Read/Grep/Glob 만 허용) 로 흐름·설명·개념을 JSON 으로 생성
  ├─ 코드 본문은 AI 가 아니라 실제 파일에서 잘라 넣고, 범위 밖 설명·없는 노드를 가리키는 선은 버림
- └─ public/flows/<slug>.json 저장 → 화면이 읽음
+ ├─ ~/.prflow/flows/<slug>.json 저장 → 화면이 읽음
+ └─ 등장한 개념을 ~/.prflow/notes 의 개념 노트에 누적
 ```
 
 - 정의 이동은 LSP 없이 `git grep` + 선언 패턴으로 찾는 가벼운 방식입니다. 이름이 같은 메서드가 여러 곳에 있으면 후보 목록이 뜹니다.
@@ -82,7 +89,8 @@ PR URL
 
 - 서버 없이 내 PC 에서만 돕니다. 코드가 밖으로 나가는 경로는 Claude Code 호출뿐입니다.
 - AI 에게는 읽기 도구(Read/Grep/Glob)만 허용합니다. 셸 실행·파일 수정·웹 접근은 막혀 있습니다.
-- 분석 결과(`public/flows/`)와 레포 사본(`~/.prflow/`)에는 대상 코드가 들어 있으니 커밋·공유하지 마세요. `public/flows/` 는 `.gitignore` 에 들어 있습니다.
+- 분석 결과·레포 사본·노트는 모두 `~/.prflow/` 에 저장됩니다. 대상 코드가 들어 있으니 공유하지 마세요. prflow 폴더 안에는 아무것도 남지 않습니다.
+- 로컬 서버는 `127.0.0.1` 에만 열립니다.
 - 회사 코드에 쓸 때는 소속 조직의 AI 사용 정책을 먼저 확인하세요.
 
 ## 상태
