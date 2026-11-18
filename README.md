@@ -1,0 +1,64 @@
+# prflow
+
+> PR 을 diff 순서가 아니라 **실행 흐름 순서**로 읽는 로컬 리뷰 도구.
+> 처음 보는 코드도 "어떻게 돌아가는지" 공부하면서 리뷰할 수 있게 돕습니다.
+
+![prflow](docs/screenshot.png)
+
+GitHub PR 화면은 바뀐 줄만, 파일 알파벳 순으로 보여줍니다. prflow 는 PR 링크를 받아 AI(Claude Code)가 코드를 직접 읽고 다음을 만들어 줍니다.
+
+- **흐름 그래프** — 화면 → API → 서비스 → 저장소 → DB/외부 순으로, 바뀐 지점 표시. 실선은 코드로 확인한 연결, 점선은 추정
+- **읽는 순서** — 어디서부터 읽으면 되는지 단계별로 (← → 키)
+- **코드 줄 설명** — 처음 보는 사람이 막힐 지점에 붙는 주석
+  - `흐름` 이 줄이 전체 흐름에서 하는 역할
+  - `개념` 프레임워크·문법이 실제로 어떻게 동작하는지 (예: `@Transactional` 프록시)
+  - `주의` 리뷰 때 확인할 점 (동시성, 트랜잭션 범위, 예외…)
+- **개념 사전** — PR 에 나온 개념만 모아서, 어디서 쓰였는지와 함께
+- **코드 탐색** — 폴더 트리 + 전체 파일, `⌘+클릭` / `⌘B` 로 정의 이동, `⌘[` 뒤로
+- **AI 에게 묻기** — 줄 번호 클릭(Shift+클릭으로 범위) → "여기 동시에 두 요청 오면 문제 없어?" 같은 질문에 AI 가 레포를 읽고 그 줄 아래에 답변
+
+## 필요한 것
+
+- Node.js 20+
+- [GitHub CLI](https://cli.github.com/) (`gh auth login` 완료)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`claude` 명령, 로그인 완료)
+
+## 사용법
+
+```bash
+npm install
+npm run analyze https://github.com/<owner>/<repo>/pull/<번호>   # 1~2분
+npm run dev                                                     # http://localhost:4173
+```
+
+분석 없이 `npm run dev` 만 실행하면 가상의 샘플 PR 을 볼 수 있습니다.
+
+## 어떻게 동작하나
+
+```
+PR URL
+ ├─ gh 로 PR 정보·diff 조회
+ ├─ 레포를 ~/.prflow/repos 에 clone(1회) → PR head 커밋을 ~/.prflow/work/<slug> 에 worktree 로 펼침
+ ├─ 빌드 파일로 스택 감지 (Spring, Next.js, Python …)
+ ├─ claude -p (Read/Grep/Glob 만 허용) 로 흐름·설명·개념을 JSON 으로 생성
+ ├─ 코드 본문은 AI 가 아니라 실제 파일에서 잘라 넣고, 범위 밖 설명·없는 노드를 가리키는 선은 버림
+ └─ public/flows/<slug>.json 저장 → 화면이 읽음
+```
+
+- 정의 이동은 LSP 없이 `git grep` + 선언 패턴으로 찾는 가벼운 방식입니다. 이름이 같은 메서드가 여러 곳에 있으면 후보 목록이 뜹니다.
+- 분석 비용·시간은 PR 크기에 따라 다릅니다. 실행이 끝나면 Claude Code 가 보고한 비용을 출력합니다.
+
+## 보안·데이터
+
+- 서버 없이 내 PC 에서만 돕니다. 코드가 밖으로 나가는 경로는 Claude Code 호출뿐입니다.
+- AI 에게는 읽기 도구(Read/Grep/Glob)만 허용합니다. 셸 실행·파일 수정·웹 접근은 막혀 있습니다.
+- 분석 결과(`public/flows/`)와 레포 사본(`~/.prflow/`)에는 대상 코드가 들어 있으니 커밋·공유하지 마세요. `public/flows/` 는 `.gitignore` 에 들어 있습니다.
+- 회사 코드에 쓸 때는 소속 조직의 AI 사용 정책을 먼저 확인하세요.
+
+## 상태
+
+MVP 입니다. 화면은 다크 테마·데스크톱 기준이고, 테스트는 아직 없습니다.
+
+## License
+
+[MIT](LICENSE)

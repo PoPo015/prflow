@@ -45,10 +45,11 @@ export interface Concept {
 }
 
 export interface Flow {
-  meta: { repo: string; pr: number; title: string; stacks: string[] }
+  meta: { repo: string; pr: number; title: string; stacks: string[]; model?: string }
   summary: { why: string; what: string }
   nodes: FlowNode[]
   edges: FlowEdge[]
   readingOrder: { node: string; why: string }[]
   concepts: Concept[]
+  changes?: Record<string, { additions: number; deletions: number; added: number[] }>
 }

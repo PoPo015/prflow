@@ -1,2 +1,4 @@
 node_modules
 dist
+# 분석 결과에는 대상 레포 코드가 들어가므로 커밋하지 않는다
+public/flows/

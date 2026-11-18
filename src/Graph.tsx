@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ReactFlow, Background, Controls, Handle, Position, MarkerType, type Node, type Edge, type NodeProps } from '@xyflow/react'
+import { useEffect, useMemo, useRef } from 'react'
+import { ReactFlow, Background, Controls, Handle, Position, MarkerType, type Node, type Edge, type NodeProps, type ReactFlowInstance } from '@xyflow/react'
 import dagre from '@dagrejs/dagre'
 import type { Flow, FlowNode } from './types'
 
@@ -61,6 +61,12 @@ export function Graph({ flow, selected, onSelect }: { flow: Flow; selected: stri
     return s
   }, [flow, selected])
 
+  // 선택한 노드와 이웃만 화면에 꽉 차게 확대
+  const rf = useRef<ReactFlowInstance<Node<CardData>> | null>(null)
+  useEffect(() => {
+    rf.current?.fitView({ nodes: [...neighbors].map((id) => ({ id })), duration: 400, padding: 0.25, maxZoom: 1.1 })
+  }, [neighbors])
+
   const nodes: Node<CardData>[] = flow.nodes.map((n) => {
     const idx = flow.readingOrder.findIndex((r) => r.node === n.id)
     return {
@@ -92,6 +98,10 @@ export function Graph({ flow, selected, onSelect }: { flow: Flow; selected: stri
       edges={edges}
       nodeTypes={nodeTypes}
       onNodeClick={(_, n) => onSelect(n.id)}
+      onInit={(inst) => {
+        rf.current = inst
+        inst.fitView({ nodes: [...neighbors].map((id) => ({ id })), padding: 0.25, maxZoom: 1.1 })
+      }}
       nodesDraggable={false}
       nodesConnectable={false}
       fitView
