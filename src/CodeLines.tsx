@@ -3,7 +3,7 @@ import { codeToTokens, type ThemedToken } from 'shiki'
 import type { Annotation } from './types'
 import type { Thread } from './api'
 
-const KIND_TAG: Record<Annotation['kind'], string> = { flow: '흐름', concept: '개념', caution: '주의' }
+const KIND_TAG: Record<Annotation['kind'], string> = { flow: '흐름', concept: '개념', caution: '주의', practice: '관례' }
 const IDENT = /^[A-Za-z_$][\w$]*$/
 
 const LANG: Record<string, string> = {
@@ -197,6 +197,7 @@ export function CodeLines({ file, source, startLine = 1, changedLines, annotatio
                 <div className="note-head">
                   <span className="note-tag">{KIND_TAG[a.kind]}</span>
                   <span className="note-title">{a.title}</span>
+                  {a.rule && <span className="note-rule">{a.rule}</span>}
                 </div>
                 <p>{a.body}</p>
                 {a.concept && onConcept && <button className="link" onClick={() => onConcept(a.concept!)}>개념 사전에서 자세히 →</button>}

@@ -304,3 +304,9 @@ h1, h2, h3, p { margin: 0; }
 .notes-msg { margin: 4px 0 8px; color: var(--added); }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-top: 8px; }
 .used-in a { text-decoration: none; }
+
+/* 관례(베스트 프랙티스) 설명 */
+:root { --practice: #2dd4bf; }
+.dot-practice { background: var(--practice); }
+.note-practice { --c: var(--practice); }
+.note-rule { margin-left: auto; font: 11px ui-monospace, monospace; color: var(--practice); opacity: .8; white-space: nowrap; }

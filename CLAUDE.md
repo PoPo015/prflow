@@ -11,6 +11,7 @@ PR 을 흐름 그래프·코드 줄 설명·개념 노트로 읽는 로컬 리�
 ## 구조
 - `scripts/analyze.mjs` PR → `~/.prflow/flows/<slug>.json` (+ 개념 노트 누적)
 - `server/api.mjs` 로컬 API (dev 는 `vite.config.ts`, 배포판은 `bin/prflow.mjs` 가 같은 핸들러 사용)
+- `rules/<스택>.md` 프레임워크 규칙(기본 개념·베스트 프랙티스·자주 하는 실수). `server/rules.mjs` 가 감지된 스택에 맞춰 프롬프트에 넣는다. 팀·회사 규칙은 `~/.prflow/rules/` (공개 레포에 넣지 않는다)
 - `src/` 화면 (React, `@xyflow/react`, `shiki`)
 - 데이터는 전부 `~/.prflow` (`server/paths.mjs`). **레포 폴더에 분석 결과를 두지 않는다** — 대상 레포 코드가 들어 있다.
 

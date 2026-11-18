@@ -1,45 +1,127 @@
 {
   "type": "object",
-  "required": ["summary", "nodes", "edges", "readingOrder", "concepts"],
+  "required": [
+    "summary",
+    "nodes",
+    "edges",
+    "readingOrder",
+    "concepts"
+  ],
   "properties": {
     "summary": {
       "type": "object",
-      "required": ["why", "what"],
-      "properties": { "why": { "type": "string" }, "what": { "type": "string" } }
+      "required": [
+        "why",
+        "what"
+      ],
+      "properties": {
+        "why": {
+          "type": "string"
+        },
+        "what": {
+          "type": "string"
+        }
+      }
     },
     "nodes": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "kind", "label", "change", "summary"],
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "change",
+          "summary"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "kind": { "enum": ["ui", "api", "service", "repository", "db", "event", "external"] },
-          "label": { "type": "string" },
-          "sub": { "type": "string" },
-          "change": { "enum": ["added", "modified", "unchanged"] },
-          "summary": { "type": "string" },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ui",
+              "api",
+              "service",
+              "repository",
+              "db",
+              "event",
+              "external"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "sub": {
+            "type": "string"
+          },
+          "change": {
+            "enum": [
+              "added",
+              "modified",
+              "unchanged"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
           "code": {
             "type": "object",
-            "required": ["file", "lang", "startLine", "endLine"],
+            "required": [
+              "file",
+              "lang",
+              "startLine",
+              "endLine"
+            ],
             "properties": {
-              "file": { "type": "string" },
-              "lang": { "type": "string" },
-              "startLine": { "type": "integer" },
-              "endLine": { "type": "integer" }
+              "file": {
+                "type": "string"
+              },
+              "lang": {
+                "type": "string"
+              },
+              "startLine": {
+                "type": "integer"
+              },
+              "endLine": {
+                "type": "integer"
+              }
             }
           },
           "annotations": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["line", "kind", "title", "body"],
+              "required": [
+                "line",
+                "kind",
+                "title",
+                "body"
+              ],
               "properties": {
-                "line": { "type": "integer" },
-                "kind": { "enum": ["flow", "concept", "caution"] },
-                "title": { "type": "string" },
-                "body": { "type": "string" },
-                "concept": { "type": "string" }
+                "line": {
+                  "type": "integer"
+                },
+                "kind": {
+                  "enum": [
+                    "flow",
+                    "concept",
+                    "caution",
+                    "practice"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "concept": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": "string"
+                }
               }
             }
           }
@@ -50,12 +132,27 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["from", "to", "status"],
+        "required": [
+          "from",
+          "to",
+          "status"
+        ],
         "properties": {
-          "from": { "type": "string" },
-          "to": { "type": "string" },
-          "label": { "type": "string" },
-          "status": { "enum": ["verified", "inferred"] }
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "inferred"
+            ]
+          }
         }
       }
     },
@@ -63,21 +160,47 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["node", "why"],
-        "properties": { "node": { "type": "string" }, "why": { "type": "string" } }
+        "required": [
+          "node",
+          "why"
+        ],
+        "properties": {
+          "node": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
       }
     },
     "concepts": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "stack", "short", "body"],
+        "required": [
+          "id",
+          "name",
+          "stack",
+          "short",
+          "body"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "stack": { "type": "string" },
-          "short": { "type": "string" },
-          "body": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stack": {
+            "type": "string"
+          },
+          "short": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
         }
       }
     }

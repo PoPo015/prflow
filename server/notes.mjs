@@ -41,7 +41,13 @@ const saveNotes = (notes) => {
 }
 
 export function addFlowToNotes(flow, slug) {
-  saveNotes(merge(loadNotes(), flow, slug, new Date().toISOString()))
+  // 같은 PR 을 다시 분석하면 예전 결과의 개념은 지우고 새로 넣는다 (이름이 바뀐 개념이 남지 않게)
+  const notes = loadNotes()
+  for (const [key, n] of Object.entries(notes)) {
+    n.seenIn = n.seenIn.filter((s) => s.slug !== slug)
+    if (!n.seenIn.length) delete notes[key]
+  }
+  saveNotes(merge(notes, flow, slug, new Date().toISOString()))
 }
 
 // 개념 하나당 마크다운 파일 하나 (옵시디언 볼트 폴더를 PRFLOW_NOTES_DIR 로 지정하면 바로 노트가 된다)

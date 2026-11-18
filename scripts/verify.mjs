@@ -130,10 +130,14 @@ for (const slug of targets) {
     }
   }
 
+  // G. 관례 설명: 규칙 id 가 붙어 있는지
+  const practice = anns.filter((a) => a.kind === 'practice')
+  practice.filter((a) => !a.rule).forEach((a) => issues.push(`규칙 없는 관례 설명: ${a.title}`))
+
   const u = flow.meta.usage ?? {}
   rows.push({
     slug, stacks: flow.meta.stacks.join('+') || '?',
-    nodes: flow.nodes.length, edges: flow.edges.length, anns: anns.length, concepts: flow.concepts.length,
+    nodes: flow.nodes.length, edges: flow.edges.length, anns: `${anns.length}(관례 ${practice.length})`, concepts: flow.concepts.length,
     label: pct(labelHit, withCode.length), anchor: pct(anchorHit, anchorChecked), edge: pct(edgeHit, verified.length),
     def: devUp ? `${defFound}/${defTried} (외부 ${external})` : '–', dropped: flow.meta.dropped ?? 0,
     cost: u.costUsd != null ? `$${u.costUsd.toFixed(2)}` : '?', sec: u.durationMs ? Math.round(u.durationMs / 1000) : '?',

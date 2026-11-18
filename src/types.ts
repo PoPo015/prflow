@@ -6,10 +6,11 @@ export type Change = 'added' | 'modified' | 'unchanged'
 // 코드 줄에 붙는 설명. 공부용 핵심 기능.
 export interface Annotation {
   line: number // code.startLine 기준 실제 줄 번호
-  kind: 'flow' | 'concept' | 'caution'
+  kind: 'flow' | 'concept' | 'caution' | 'practice'
   title: string
   body: string
   concept?: string // concepts[].id 로 연결
+  rule?: string // 규칙 id (예: spring/self-invocation), practice 일 때
 }
 
 export interface FlowNode {
@@ -45,7 +46,7 @@ export interface Concept {
 }
 
 export interface Flow {
-  meta: { repo: string; pr: number; title: string; stacks: string[]; model?: string }
+  meta: { repo: string; pr: number; title: string; stacks: string[]; model?: string; rules?: string[] }
   summary: { why: string; what: string }
   nodes: FlowNode[]
   edges: FlowEdge[]

@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { doctor } from './doctor.mjs'
 import { FLOWS, REPOS, WORK } from '../server/paths.mjs'
 import { addFlowToNotes } from '../server/notes.mjs'
+import { loadRules } from '../server/rules.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MAX_DIFF = 60_000
@@ -75,6 +76,8 @@ if (py || buildFiles(['manage.py']).length) {
 const ext = (e) => tracked.filter((f) => f.endsWith(e)).length
 if (stacks.includes('Python') && ext('.go') > ext('.py') * 3) stacks.splice(stacks.indexOf('Python'), 1)
 log(`✓ 스택 감지: ${stacks.join(', ') || '알 수 없음'}`)
+const rules = loadRules(stacks)
+if (rules.names.length) log(`✓ 규칙: ${rules.names.join(', ')} (${rules.ids.size}개)`)
 
 // diff 에서 head 쪽 "추가된 줄" 번호 수집 → 화면의 + 표시용
 const added = {}
@@ -118,10 +121,14 @@ ${diff.slice(0, MAX_DIFF)}
    - flow: 이 줄이 전체 흐름에서 어떤 역할인지, 어디로 이어지는지
    - concept: 프레임워크·언어 문법/애노테이션이 실제로 어떻게 동작하는지 (예: 프록시, 트랜잭션, 훅)
    - caution: 리뷰 때 확인할 점 (동시성, 트랜잭션 범위, 예외, 보안, 성능)
-   노드당 1~4개. 뻔한 설명은 쓰지 말고, 모르는 사람이 막힐 지점을 골라라.
+   - practice: 아래 규칙에 비춰 이 코드가 지키고 있는 것(왜 좋은지) 또는 어기는 것(무엇이 문제인지). rule 에 규칙 id(예: spring/self-invocation)를 반드시 적는다.
+   노드당 1~5개. 뻔한 설명은 쓰지 말고, 모르는 사람이 막힐 지점을 골라라.
+   규칙 목록에 있는 실수가 코드에 실제로 있으면 놓치지 말고 practice 로 짚어라. 없는 문제를 만들어내지는 마라.
 4. edges.status: 호출 코드를 직접 확인했으면 verified, 추정이면 inferred.
 5. readingOrder: 리뷰어가 읽을 순서와 이유. concepts: 등장한 핵심 개념 3~8개 (annotation.concept 로 연결).
-6. 모든 설명은 한국어, 짧고 구체적으로. 파일을 수정하거나 명령을 실행하지 마라.`
+   concepts 의 name 은 규칙의 "기본 개념"에 같은 개념이 있으면 그 이름(예: 프록시 기반 AOP)을 그대로 써라 — PR 간 개념 노트가 합쳐지도록.
+6. 모든 설명은 한국어, 짧고 구체적으로. 파일을 수정하거나 명령을 실행하지 마라.
+${rules.text ? `\n# 이 스택의 규칙 (기본 개념 · 베스트 프랙티스 · 자주 하는 실수)\n${rules.text}` : ''}`
 
 log(`… AI 분석 중 (모델 ${model}). PR 크기에 따라 수 분 걸릴 수 있어요`)
 const started = Date.now()
@@ -177,6 +184,10 @@ for (const n of ai.nodes) {
     while (d < 6 && !(lines[a.line - 1 + d]?.trim() && a.line + d <= end) && !(lines[a.line - 1 - d]?.trim() && a.line - d >= start)) d++
     a.line = lines[a.line - 1 + d]?.trim() && a.line + d <= end ? a.line + d : a.line - d
   }
+  for (const a of n.annotations) {
+    if (a.rule && !rules.ids.has(a.rule)) delete a.rule
+    if (a.kind === 'practice' && !a.rule) a.kind = 'caution'
+  }
   dropped += before - n.annotations.length
 }
 const edges = ai.edges.filter((e) => ids.has(e.from) && ids.has(e.to))
@@ -189,6 +200,7 @@ const flow = {
     title: pr.title,
     stacks,
     model,
+    rules: rules.names,
     usage: { costUsd: res.total_cost_usd, durationMs: Date.now() - started, turns: res.num_turns, usage: res.usage },
     dropped,
   },

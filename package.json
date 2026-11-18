@@ -28,7 +28,8 @@
     "scripts/analyze.mjs",
     "scripts/doctor.mjs",
     "scripts/flow.schema.json",
-    "server"
+    "server",
+    "rules"
   ],
   "scripts": {
     "dev": "vite --port 4173",
