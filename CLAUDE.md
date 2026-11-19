@@ -6,7 +6,7 @@ PR 을 흐름 그래프·코드 줄 설명·개념 노트로 읽는 로컬 리�
 - 가볍게 간다. 프레임워크·추상화 추가보다 파일 하나 더 만드는 쪽. 실험 기능은 파일을 분리해 쉽게 뺄 수 있게.
 - 코드 주석·UI 문구·커밋 메시지는 한국어. 주변 코드 밀도에 맞춘다.
 - AI 결과는 그대로 믿지 않는다. 코드 본문·줄 번호·변경 표시처럼 프로그램이 확인할 수 있는 건 프로그램이 채우거나 보정한다 (`scripts/analyze.mjs` ⑤).
-- AI 호출은 항상 읽기 전용(`--allowedTools Read Grep Glob`, 나머지 disallow).
+- AI 호출은 항상 읽기 전용(`--allowedTools Read Grep Glob`, 나머지 disallow). 대상 레포의 `.claude` 설정(hooks)을 읽지 않도록 `--setting-sources user`.
 
 ## 구조
 - `scripts/analyze.mjs` PR → `~/.prflow/flows/<slug>.json` (+ 개념 노트 누적)

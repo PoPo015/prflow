@@ -143,6 +143,7 @@ const raw = await new Promise((resolve, reject) => {
     '--permission-mode', 'default',
     '--strict-mcp-config',
     '--no-session-persistence',
+    '--setting-sources', 'user', // 대상 레포의 .claude/settings.json(hooks 등)을 읽지 않는다
   ], { cwd: workDir, stdio: ['pipe', 'pipe', 'inherit'] })
   let out = ''
   p.stdout.on('data', (d) => (out += d))

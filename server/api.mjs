@@ -1,7 +1,7 @@
 // 로컬 API. vite dev 서버(vite.config.ts)와 npx 실행(bin/prflow.mjs)이 같은 핸들러를 쓴다.
 // 분석한 PR 의 worktree(~/.prflow/work/<slug>)를 읽기 전용으로 노출한다.
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve, sep, dirname, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { FLOWS, WORK } from './paths.mjs'
@@ -12,17 +12,26 @@ const MAX_FILE = 1024 * 1024
 const BUF = { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
 
 const workDir = (slug) => {
-  if (!slug || !/^[\w.-]+$/.test(slug)) throw new Error('잘못된 f')
+  if (!slug || !/^[\w.-]+$/.test(slug) || /^\.+$/.test(slug)) throw new Error('잘못된 f')
   const dir = join(WORK, slug)
   if (!existsSync(dir)) throw new Error('분석한 레포가 없어요')
   return dir
 }
 
-// 경로 탈출(../) 방지
+// 경로 탈출(../, 레포 밖을 가리키는 symlink) 방지
 const safePath = (dir, p) => {
   const full = resolve(dir, p)
   if (!full.startsWith(dir + sep)) throw new Error('잘못된 경로')
+  if (existsSync(full) && !realpathSync(full).startsWith(realpathSync(dir) + sep)) throw new Error('잘못된 경로')
   return full
+}
+
+// 다른 사이트가 로컬 API 를 부르지 못하게 (CSRF, DNS rebinding). Host 는 localhost 만, POST 는 같은 출처만
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?$/
+const isTrusted = (req) => {
+  const host = req.headers.host ?? ''
+  if (!LOCAL_HOST.test(host)) return false
+  return req.method !== 'POST' || req.headers.origin === `http://${host}`
 }
 
 const json = (res, body, status = 200) => {
@@ -135,6 +144,7 @@ ${history ? `\n지금까지 대화:\n${history}\n` : ''}
       '--allowedTools', 'Read', 'Grep', 'Glob',
       '--disallowedTools', 'Bash', 'Edit', 'Write', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Agent',
       '--permission-mode', 'default', '--strict-mcp-config', '--no-session-persistence',
+      '--setting-sources', 'user', // 대상 레포의 .claude/settings.json(hooks 등)을 읽지 않는다
     ], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] })
     let out = ''
     let err = ''
@@ -169,6 +179,7 @@ function startAnalyze(url) {
 // /api/* 요청 처리. url 은 /api 를 뗀 경로
 export async function handleApi(req, res) {
   const u = new URL(req.url ?? '/', 'http://x')
+  if (!isTrusted(req)) return json(res, { error: 'forbidden' }, 403)
   try {
     // 레포와 상관없는 요청
     if (u.pathname === '/analyze' && req.method === 'POST') return json(res, startAnalyze((await readBody(req)).url))
@@ -214,6 +225,7 @@ export async function handleApi(req, res) {
 
 // /flows/* : ~/.prflow/flows 의 분석 결과 JSON 을 내려준다
 export function handleFlows(req, res) {
+  if (!isTrusted(req)) return json(res, { error: 'forbidden' }, 403)
   const name = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname.replace(/^\//, ''))
   if (!/^[\w.-]+\.json$/.test(name) || extname(name) !== '.json') return json(res, { error: 'not found' }, 404)
   const path = join(FLOWS, name)
