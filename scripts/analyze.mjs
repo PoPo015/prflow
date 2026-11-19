@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { doctor } from './doctor.mjs'
 import { FLOWS, REPOS, WORK } from '../server/paths.mjs'
-import { addFlowToNotes } from '../server/notes.mjs'
+import { addFlowToNotes, conceptKey } from '../server/notes.mjs'
 import { loadRules } from '../server/rules.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -190,6 +190,14 @@ for (const n of ai.nodes) {
     if (a.kind === 'practice' && !a.rule) a.kind = 'caution'
   }
   dropped += before - n.annotations.length
+}
+// annotation.concept 은 concepts[].id 여야 한다. AI 가 이름을 넣은 경우 id 로 바꾸고, 못 찾으면 연결을 뗀다
+const conceptIds = new Map(ai.concepts.flatMap((c) => [[c.id, c.id], [conceptKey(c.name), c.id]]))
+for (const a of ai.nodes.flatMap((n) => n.annotations ?? [])) {
+  if (!a.concept) continue
+  const id = conceptIds.get(a.concept) ?? conceptIds.get(conceptKey(a.concept))
+  if (id) a.concept = id
+  else delete a.concept
 }
 const edges = ai.edges.filter((e) => ids.has(e.from) && ids.has(e.to))
 dropped += ai.edges.length - edges.length

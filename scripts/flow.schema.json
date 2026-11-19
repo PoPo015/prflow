@@ -117,7 +117,8 @@
                   "type": "string"
                 },
                 "concept": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "연결할 개념의 concepts[].id (이름이 아니라 id)"
                 },
                 "rule": {
                   "type": "string"
