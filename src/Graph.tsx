@@ -37,7 +37,7 @@ function Card({ data }: NodeProps<Node<CardData>>) {
 
 const nodeTypes = { card: Card }
 
-export function Graph({ flow, selected, onSelect }: { flow: Flow; selected: string; onSelect: (id: string) => void }) {
+export function Graph({ flow, selected, onSelect, colorMode }: { flow: Flow; selected: string; onSelect: (id: string) => void; colorMode: 'light' | 'dark' }) {
   // 레이아웃은 데이터가 바뀔 때만 계산
   const positions = useMemo(() => {
     const g = new dagre.graphlib.Graph()
@@ -107,7 +107,7 @@ export function Graph({ flow, selected, onSelect }: { flow: Flow; selected: stri
       fitView
       fitViewOptions={{ padding: 0.15 }}
       proOptions={{ hideAttribution: true }}
-      forceColorMode="dark"
+      forceColorMode={colorMode}
     >
       <Background gap={22} size={1} />
       <Controls showInteractive={false} />

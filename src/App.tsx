@@ -6,6 +6,8 @@ import { api as makeApi, type Thread, type Usage } from './api'
 import { AnalyzeDialog } from './AnalyzeDialog'
 import { Notes } from './Notes'
 import type { Flow } from './types'
+import { THEME_LABEL, useTheme } from './theme'
+import { NotesToggle } from './NotesToggle'
 
 export function App({ flow, flows, current }: { flow: Flow; flows: { id: string; title: string }[]; current: string }) {
   const order = flow.readingOrder
@@ -13,6 +15,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
   const [tab, setTab] = useState<'code' | 'concepts'>('code')
   const [focusConcept, setFocusConcept] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const theme = useTheme()
 
   // 코드 탐색: 분석한 레포가 로컬에 있을 때만 (샘플은 없음)
   const api = useMemo(() => makeApi(current), [current])
@@ -106,6 +109,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
                 {flows.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
               </select>
             )}
+            <button className="theme-toggle" onClick={theme.cycle} title="화면 테마 바꾸기">{THEME_LABEL[theme.pref]}</button>
           </div>
           <h1>{flow.meta.title}</h1>
           <div className="modes">
@@ -133,7 +137,7 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
       ) : (
       <main className="main">
         <section className="graph">
-          <Graph flow={flow} selected={selected} onSelect={select} />
+          <Graph flow={flow} selected={selected} onSelect={select} colorMode={theme.resolved} />
           <div className="legend">
             <span><i className="lg-line solid" />코드로 확인</span>
             <span><i className="lg-line dashed" />추정</span>
@@ -161,7 +165,8 @@ export function App({ flow, flows, current }: { flow: Flow; flows: { id: string;
                   <div className="code-file">
                     {hasRepo
                       ? <button className="file-link" onClick={() => openCode({ path: node.code!.file, line: node.code!.startLine })}>{node.code.file} <span>전체 파일 보기 →</span></button>
-                      : node.code.file}
+                      : <span>{node.code.file}</span>}
+                    {node.annotations?.length ? <NotesToggle /> : null}
                   </div>
                   <CodeLines
                     file={node.code.file}

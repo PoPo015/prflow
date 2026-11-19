@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { codeToTokens, type ThemedToken } from 'shiki'
 import type { Annotation } from './types'
 import type { Thread } from './api'
+import { useNotesShown } from './NotesToggle'
 
 const KIND_TAG: Record<Annotation['kind'], string> = { flow: '흐름', concept: '개념', caution: '주의', practice: '관례' }
 const IDENT = /^[A-Za-z_$][\w$]*$/
@@ -109,15 +110,20 @@ export function CodeLines({ file, source, startLine = 1, changedLines, annotatio
   const hovered = useRef<string | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const meta = useMetaKey()
+  const notesShown = useNotesShown()
 
   useEffect(() => {
     let alive = true
     setTokens(null)
     setSel(null)
-    setOpen(new Set(annotations?.map((a) => a.line)))
-    codeToTokens(source, { lang: langOf(file) as never, theme: 'github-dark-default' }).then((r) => alive && setTokens(r.tokens), () => {})
+    codeToTokens(source, { lang: langOf(file) as never, themes: { light: 'github-light-default', dark: 'github-dark-default' }, defaultColor: false }).then((r) => alive && setTokens(r.tokens), () => {})
     return () => { alive = false }
   }, [file, source])
+
+  // AI 설명 켜기/끄기를 바꾸면 전부 펼치거나 접는다. 끈 상태에서도 점을 눌러 하나씩 볼 수 있다
+  useEffect(() => {
+    setOpen(new Set(notesShown ? annotations?.map((a) => a.line) : []))
+  }, [file, source, notesShown])
 
   // 지정한 줄로 스크롤 + 잠깐 강조
   useEffect(() => {
@@ -164,10 +170,10 @@ export function CodeLines({ file, source, startLine = 1, changedLines, annotatio
 
   const tokenEl = (t: ThemedToken, key: number) => {
     const word = t.content.trim()
-    if (!onDefinition || !IDENT.test(word)) return <span key={key} style={{ color: t.color }}>{t.content}</span>
+    if (!onDefinition || !IDENT.test(word)) return <span key={key} style={t.htmlStyle}>{t.content}</span>
     return (
       <span
-        key={key} className="sym" style={{ color: t.color }}
+        key={key} className="sym" style={t.htmlStyle}
         onMouseEnter={() => (hovered.current = word)}
         onMouseLeave={() => (hovered.current = null)}
         onClick={(e) => {

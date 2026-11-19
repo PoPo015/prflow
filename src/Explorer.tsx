@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CodeLines } from './CodeLines'
 import { Usages } from './Usages'
+import { NotesToggle } from './NotesToggle'
 import type { Api, DefHit, Thread, Usage } from './api'
 import type { Flow } from './types'
 
@@ -142,6 +143,7 @@ export function Explorer({ api, flow, loc, onOpen, onBack, canBack, threads, onA
           <button className="nav sm" onClick={onBack} disabled={!canBack} title="뒤로 (⌘[)">←</button>
           <span className="crumb">{loc?.path ?? '왼쪽에서 파일을 고르세요'}</span>
           <span className="hint">⌘+클릭 정의 · ⌥+클릭 사용처 · 줄 번호 클릭 AI 에게 묻기</span>
+          <NotesToggle />
         </div>
         {err && <div className="empty">{err}</div>}
         {content && loc && content.path === loc.path && (
